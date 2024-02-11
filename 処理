@@ -1,0 +1,584 @@
+import tkinter as tk
+import datetime as dt
+from tkinter import ttk
+import sys
+from tkinter import messagebox
+
+
+
+root=tk.Tk()
+root.title("前処理")
+root.resizable(width=False,height=False)
+root.geometry("650x800")
+
+"""-----------------------------------------
+
+#データ群
+
+-----------------------------------------"""
+
+
+askl_value=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
+plus_value=["k","l"]
+locker_value=['m', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u']#ロッカー
+etc_value=["その他"]#様々な掛け方
+
+dict_seihin={'a': 50, 'b': 50, 'c': 50, 'd': 30, 'e': 50, 'f': 50, 'g': 50, 'h': 30, 'i': 50, 'j': 50, 'k': 10, 'l': 20,
+ 'm': 20, 'n': 30, 'o': 10, 'その他': 10, 'p': 30, 'q': 30, 'r': 10, 's': 10, 't': 40, 'u': 40}
+
+#かけ方による設定数の決まり　治具1個に対して製品何個掛けるか　1割る治具に掛ける製品数で求めること可能　例）治具1個に対して３．５枚なら１割る３．５で約０．２９
+
+"""     -----------------注釈------------------
+1枚掛け＝１、2枚掛け＝０．５、１．５枚掛け＝０．６７、3枚掛け＝０．３３、２．５枚掛け＝０．４、4枚掛け＝０．２５、5枚掛け＝０．２、6枚掛け＝０．１７
+2掛け1空け＝１．５、1掛け1空け＝２、1掛け2空け＝３、1掛け３空け＝４、1掛け4空け＝５、1掛け６空け＝７、1掛け10空け＝１１、1掛け12空け＝１３
+kd1x6のように1台に対して扉6枚の場合は係数に対して6倍で設定
+"""
+
+dict_buhin={'a': {'天板': 0.5, '底板': 0.5, '扉': 1, '背板': 1, '右側板': 1.5, '左側板': 1.5}, 'b': {'天板': 0.5, '底板': 0.5, '扉': 1, '横仕切り': 0.68, '背板': 1, '右側板': 1.5, '左側板': 1.5}, 'c': {'天板': 0.5, '底板': 0.5, '扉': 1, '横仕切り': 1.5, '背板': 1, '右側板': 1.5, '左側板': 1.5},
+ 'd': {'天板': 0.5, '底板': 0.5, '扉': 1.5, '横仕切り': 2.5, '背板': 1, '右側板': 1.5, '左側板': 1.5}, 'e': {'天板': 0.5, '底板': 0.5, '棚板': 0.5, '扉': 1.5, '背板': 1, '右側板': 1.5, '左側板': 1.5}, 'f': {'天板': 0.67, '底板': 0.67, '背板(上中)': 1.5, '背板(下)': 0.5, '棚板': 1, '扉': 1.5, '右側板': 1.5, '左側板': 1.5},
+ 'g': {'天板': 0.67, '底板': 0.67, '背板(上中)': 1.5, '背板(下)': 0.5, '棚板': 1.5, '右扉': 1.5, '左扉': 1.5, '右側板': 1.5, '左側板': 1.5, '縦仕切り': 1}, 'h': {'天板': 1, '底板': 1, '棚板': 1.34, 'アジャスター板': 0.5, '右扉': 1, '左扉': 1, '右側板': 1, '左側板': 1, '右背板': 1, '左背板': 1},
+ 'i': {'左側板': 0.5, '右側板': 0.5, '天板': 0.5, '棚板': 0.5, '底板': 0.67, '背板': 0.67}, 'j': {'左側板': 0.5, '右側板': 0.5, '天板': 0.5, '棚板': 0.5, '底板': 0.67, '背板': 2}, 'k': {'本体': 16, '扉': 4.5}, 'l': {'本体': 16, '棚板': 2.68, '右扉': 1.5, '左扉': 1.5}, 'm': {'本体': 7, '棚板': 0.4, '扉': 0.5},
+ 'n': {'本体': 7, '引出裏板': 0.67, '引出': 3}, 'o': {'本体': 16, '床板': 0.5, '扉': 1}, 'その他': {'1枚掛け': 1, '2-1枚掛け': 0.67, '2枚掛け': 0.5, '3-2枚掛け': 0.4, '3枚掛け': 0.33, '4枚掛け': 0.25, '5枚掛け': 0.2, '6枚掛け': 0.17, '2掛1空': 1.5, '1掛1空': 2, '1掛2空': 3, '1掛3空': 4, '1掛4空': 5, '1掛6空': 7,
+'1掛8空': 9, '1掛10空': 11, '1掛12空': 13, '1掛14空': 15, '1掛15空': 16, '1掛17空': 18, '1掛18空': 19, '1掛20空': 21, '1掛25空': 26}, 'p': {'天板': 1.0, '底板': 1.0, '扉': 2.0, '右背板': 0.67, '左背板': 0.67, '右側板': 0.67, '左側板': 0.67, '縦仕切り': 0.67, '右棚板': 0.5, '左棚板': 0.5, 'アジャスター版': 0.5},
+ 'q': {'天板': 1.0, '底板': 1.0, '扉': 1.0, '右背板': 0.67, '左背板': 0.67, '右側板': 0.67, '左側板': 0.67, '縦仕切り': 0.67, '右横仕切り': 0.67, '左横仕切り': 0.67, 'アジャスター版': 0.5}, 'r': {'本体': 16.0, '扉': 4.5}, 's': {'本体': 16.0, '扉': 3.0}, 't': {'本体': 16.0, '右扉': 1.0, '左扉': 1.0, '棚板': 2.5},
+ 'u': {'本体': 16.0, '棚板\u3000大': 2.0, '棚板\u3000小': 6.0}}
+
+
+"""------------------------------------------
+
+関数群
+
+-----------------------------------------"""
+
+#現在時刻ボタン用の関数を設定
+def time_now():
+    hour_spin.delete(0,tk.END)#hour_spinを初期化
+    min_spin.delete(0,tk.END)#min_spinを初期化
+    time_now=dt.datetime.now().time()#time_now変数に現在時刻を代入 ＊ローカル変数
+    hour_spin.insert(0,time_now.hour)#time_nowに入っている時刻の中で時間だけをhour_spinに入力
+    min_spin.insert(0,time_now.minute)#time_nowに入っている時刻の中で分だけをmin_spinに入力
+    
+    
+#++++++++++++++++++++++++++++++++++++++++++
+    
+#comboboxselected関数を設定
+
+#++++++++++++++++++++++++++++++++++++++++++
+combo_hantei="0"#選択中の製品名を受け取る変数の初期化 リストボックスから選択したときに部品名の前に製品名を付けないといけないため、共通の変数combo_hanteiを設定　formatで製品名、部品名と入力
+#ボックス選択時の関数
+def askl_select(event):#bind関数の場合は引数にeventを設定
+    global combo_hantei
+    buhin_list.delete(0,tk.END)#buhin_listを初期化　引数は始まりの行数～終わりの行数
+    seihin_hako=askl_combo.get()#コンボボックスに選択された製品名を代入 ＊ローカル変数
+    sagyou_spin.delete(0,tk.END)#作業数を初期化
+    sagyou_spin.insert(0,dict_seihin[seihin_hako])#as_hakoに代入された製品名に対応したdict_seihinに設定されている値をspinboxにセット
+    for i in dict_buhin[seihin_hako]:#as_hakoに代入された製品名に対応下dict_buhinに設定されている部品名をすべてbuhin_listに代入していく
+        buhin_list.insert(0,i)#引数は第一引数が入力する最初の行数、第二引数が入力する値
+    combo_hantei=ask_var.get()#選択中の製品名を受け取る
+    
+
+    
+    
+    
+"""　　------注釈-------
+tkinter.Spinboxとttk.Spinboxでは扱えるメソッドに違いがある
+ttkの場合はset(value)メソッドを使うことで値を直接上書きすることができる
+tkの場合はset(value)メソッドを使うことはできないため、まずはdeleteで初期化してから値を入力する形を作る必要あり
+今回の場合はtk.Spinboxを使っているのでdeleteで初期化をする必要がある
+初期化後にinsertメソッドを使って値を入力
+setメソッドは引数に値を入れるだけでいいが、insertの場合は第一引数に入力する位置、第二引数に入力する値を設定する
+"""
+
+#ボックス選択時の関数
+def plus_select(event):
+    global combo_hantei
+    buhin_list.delete(0,tk.END)
+    seihin_hako=plus_combo.get()
+    sagyou_spin.delete(0,tk.END)
+    sagyou_spin.insert(0,dict_seihin[seihin_hako])
+    for i in dict_buhin[seihin_hako]:
+        buhin_list.insert(0,i)
+    combo_hantei=plu_var.get()
+
+
+#ロッカー選択時の関数
+def locker_select(event):
+    global combo_hantei
+    buhin_list.delete(0,tk.END)
+    seihin_hako=locker_combo.get()
+    sagyou_spin.delete(0,tk.END)
+    sagyou_spin.insert(0,dict_seihin[seihin_hako])
+    for i in dict_buhin[seihin_hako]:
+        buhin_list.insert(0,i)
+    combo_hantei=lock_var.get()
+
+#その他選択時の関数
+def etc_select(event):
+    global combo_hantei
+    buhin_list.delete(0,tk.END)
+    seihin_hako=etc_combo.get()
+    sagyou_spin.delete(0,tk.END)
+    sagyou_spin.insert(0,dict_seihin[seihin_hako])
+    for i in dict_buhin[seihin_hako]:
+        buhin_list.insert(0,i)
+    combo_hantei=etc_var.get()
+    
+    
+#++++++++++++++++++++++++++++++++++++++++++++
+
+#spinboxのbind関数設定
+
+#++++++++++++++++++++++++++++++++++++++++++++
+#スピンボックスに何も入力されていなかった場合に入力欄を1にする設定
+def spin_out(event):
+    sagyou_spin=event.widget
+    if not sagyou_spin.get():#スピンボックス内に何も入っていないときの条件分岐
+        sagyou_spin.delete(0,tk.END)
+        sagyou_spin.insert(0,"1")
+
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++
+
+#listboxselect関数を設定
+
+#+++++++++++++++++++++++++++++++++++++++++++++
+
+sagyou_index=0
+#部品選択時のbind関数設定
+def buhin_bind(event):
+    global sagyou_index
+    
+    spinsuu = 0
+    spin_hantei=sagyou_spin.get()
+    if spin_hantei == "":
+        res=tk.messagebox.showerror(title="エラー",message="作業数の入力を確認してください")
+        
+        sys.exit()
+    
+    index = buhin_list.curselection()
+    if len(index) == 1:
+        buhintaku = buhin_list.get(index)
+        spinsuu = int(sagyou_spin.get())
+        if hz_invar.get() == 0:
+            hz_time = 3491#58分11秒を秒数に変化した数値
+            hitu_time = hz_time * spinsuu * dict_buhin[combo_hantei][buhintaku] / (270 * 60)#1周あたりの秒数×作業数×治具係数÷（1周の治具本数×秒数を分換算にするための60）
+            henkan_time=int(round(hitu_time))
+            for i in range(70):
+                hantei=sagyou_entry[i].get()
+                if hantei == "":
+                    sagyou_entry[i].insert(0,"{}  {}".format(combo_hantei,buhintaku))
+
+                    sagyou_time[i]["state"]="normal"
+                    sagyou_time[i].delete(0,tk.END)#初期化
+                    sagyou_time[i].insert(0,henkan_time)
+                    sagyou_time[i]["state"]="readonly"
+                    sagyou_index += 1
+                    
+                    break
+                else:
+                    continue
+        else:
+            hz_time = 3039#50分39秒を秒数に変化した数値
+            hitu_time = hz_time * spinsuu * dict_buhin[combo_hantei][buhintaku] / (270 * 60)#1周あたりの秒数×作業数×治具係数÷（1周の治具本数×秒数を分換算にするための60）
+            henkan_time=int(round(hitu_time))
+            for i in range(70):
+                hantei=sagyou_entry[i].get()
+                if hantei == "":
+                    sagyou_entry[i].insert(0,"{}  {}".format(combo_hantei,buhintaku))
+
+                    sagyou_time[i]["state"]="normal"
+                    sagyou_time[i].delete(0,tk.END)#初期化
+                    sagyou_time[i].insert(0,henkan_time)
+                    sagyou_time[i]["state"]="readonly"
+                    sagyou_index += 1
+                    break
+                else:
+                    continue
+
+            
+#++++++++++++++++++++++++++++++++++++++++++++++
+
+#ボタン用関数の設定
+
+#++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#削除ボタンの関数設定
+def sakujo():
+    global sagyou_index
+    focus_hantei=sagyou_frame.focus_get()#フォーカスがどこにあるかを判定するための変数
+
+    for i in sagyou_entry:#sagyou_entryリストを繰り返し処理してフォーカスの位置を調べる
+        if focus_hantei == i:#もしsagyou_entryリストの中にフォーカスがあれば削除開始
+            i.delete(0,tk.END)
+        else:#sagyou_entry以外の場所にフォーカスがあれば実行せずにパス
+            pass
+    
+    for i in sagyou_entry:#sagyou_entryリストの中に空欄がないか判別するための繰り返し処理
+        ind=sagyou_entry.index(i)
+        sakujo_hantei=i.get()
+        time_hantei=sagyou_time[ind].get()
+        if sakujo_hantei == "" and time_hantei != "" :#空欄となっているsagyou_entryを見つけたらインデックスに紐づくsagyou_timeリストの作業時間を削除開始
+            sagyou_time[ind]["state"]="normal"
+            sagyou_time[ind].delete(0,tk.END)
+            sagyou_time[ind]["state"]="readonly"
+            sagyou_index -= 1
+        else:
+            pass
+    
+    
+
+            
+
+#全削除の設定
+def all_sakujo():
+    global sagyou_index
+    sagyou_index=0
+    for i in sagyou_entry:
+        i.delete(0,tk.END)
+    for i in sagyou_time:
+        i["state"]="normal"
+        i.delete(0,tk.END)
+        i["state"]="readonly"
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++
+
+#色変更 ラベル　bind
+
+#++++++++++++++++++++++++++++++++++++++++++++++
+#ラベル等のbindを設定するとき第一引数にシーケンスを設定するが、記述方式"<< >>"ではうまく行かないことがある　"< >"こちらの記述ならok
+
+def color_change_red(event):
+    event.widget.configure(bg="deep pink")
+def color_change_green(event):
+    event.widget.configure(bg="cyan2")
+def color_change_yellow(event):
+    event.widget.configure(bg="goldenrod2")
+def color_change_white(event):
+    event.widget.configure(bg="white")
+    
+        
+                    
+        
+#++++++++++++++++++++++++++++++++++++++++++++++
+
+#スタートボタン関数
+
+#++++++++++++++++++++++++++++++++++++++++++++++
+
+def start_wind():
+    
+    
+    kaisi_hour = hour_spin.get()#str型
+    kaisi_min = min_spin.get()
+    global sagyou_index#int型
+    
+    #改修
+    
+    kaisyu_sagyou=[]#sagyou_entryリストの中身を計算するためのリストkaisyu_sagyouに移し替え　その時にsagyou_entryの空欄部分を取り除く作業を行う
+    kaisyu_time=[]
+    for a in range(70):#sagyou_entryやsagyou_timeリストに空欄があったときその空欄を排除するための処理
+        if (sagyou_entry[a].get() != "") and (sagyou_time[a].get() != ""):#sagyou_entry,sagyou_timeどちらかのリストが空欄だった時に実行
+            kaisyu_sagyou.append(sagyou_entry[a].get())
+            kaisyu_time.append(sagyou_time[a].get())
+    sagyou_index=len(kaisyu_sagyou)#sagyou_indexをリストの長さで変更
+    #改修ここまで
+
+
+    try:
+        jikan_ijou  = "{}:{}".format(kaisi_hour,kaisi_min)
+        jikan_sirabe = dt.datetime.strptime(jikan_ijou,"%H:%M")
+    except ValueError:
+        res=tk.messagebox.showerror(title="エラー",message="時間設定が異常です")
+        
+        return None
+    
+    
+
+    if kaisi_hour == "" or kaisi_min == "" :
+        
+        pass
+    else:
+        sub_label=[""]*sagyou_index#list型
+        sub_label2=[""]*sagyou_index
+        sub_win=tk.Toplevel()
+        sub_win.title("処理")
+        sub_win.resizable(width=False,height=False)
+        sub_win.geometry("650x700")
+        sub_canvas=tk.Canvas(sub_win)
+        sub_canvas.pack(expand=True,fill=tk.BOTH)
+        sub_canvas.pack_propagate(0)
+        sub_frame=tk.Frame(sub_canvas)
+        sub_scr=tk.Scrollbar(sub_canvas,orient=tk.VERTICAL,command=sub_canvas.yview)
+        sub_canvas.configure(scrollregion=(0,0,640,2580))
+        sub_canvas.configure(yscrollcommand=sub_scr.set)
+        sub_scr.pack(side=tk.RIGHT,fill=tk.Y)
+        sub_canvas.create_window(5,5,window=sub_frame,anchor="nw",width=630,height=2550)
+
+        #時間計算
+        
+        start_jikan="{}:{}".format(kaisi_hour,kaisi_min)#str型
+        end_jikan=[start_jikan]*sagyou_index#list型　中身はstr型
+        kaisi_jikan=[""]*sagyou_index#list型
+        syoki_min=0#int型
+        flag_box11=True
+        kaisi_11hantei=30
+        flag_box12=True
+        flag_box15=True
+        flag_box17=True
+        end_datetime=dt.datetime.strptime(start_jikan,"%H:%M")#start_jikanをdatetime型に変換しend_datetimeに代入 datetime型
+        for x in range(sagyou_index):
+            
+            
+            end_kekka=end_datetime+dt.timedelta(minutes=syoki_min)#datetime型
+            kaisi_jikan[x] = "{}:{}".format(end_kekka.hour,end_kekka.minute)#str型
+            syoki_min+=int(kaisyu_time[x])#int型
+
+            kaisi_kekka=end_kekka+dt.timedelta(minutes=int(kaisyu_time[x]))#datetime型
+            if yasumi12_bool.get() == True:
+                yasumi11_hantei=dt.time(11,15,0)
+                sagyou_now=kaisi_kekka.time()
+                if (end_datetime > dt.datetime(1900,1,1,11,15,0)) and (end_datetime < dt.datetime(1900,1,1,11,45,0)):
+                    flag_box11=False
+                    end_datetime=dt.datetime(1900,1,1,11,45,0)
+                    end_kekka=end_datetime+dt.timedelta(minutes=0)
+                    kaisi_jikan[x]="{}:{}".format(end_kekka.hour,end_kekka.minute)
+                    #syoki_min+=int(sagyou_time[x].get())
+                    kaisi_kekka=end_kekka+dt.timedelta(minutes=int(kaisyu_time[x]))                    
+                    #syoki_min+=end_datetime.minute-int(kaisi_min)
+                elif (end_datetime >= dt.datetime(1900,1,1,11,45,0)) and (end_datetime < dt.datetime(1900,1,1,23,59,59)):
+                    flag_box11=False
+                elif (sagyou_now > yasumi11_hantei) and flag_box11 == True:
+                    kaisi_kekka=kaisi_kekka+dt.timedelta(minutes=30)
+                    flag_box11=False
+                    syoki_min+=30
+                    
+            if (yasumi12_bool.get() == True) and (flag_box11 == False):
+                yasumi12_hantei=dt.time(12,0,0)
+                sagyou_now=kaisi_kekka.time()
+                if (end_datetime >= dt.datetime(1900,1,1,12,0,0)) and (end_datetime < dt.datetime(1900,1,1,12,40,0)):
+                    flag_box12=False
+                    end_datetime=dt.datetime(1900,1,1,12,40,0)
+                    end_kekka=end_datetime+dt.timedelta(minutes=0)
+                    kaisi_jikan[x]="{}:{}".format(end_kekka.hour,end_kekka.minute)
+                    kaisi_kekka=end_kekka+dt.timedelta(minutes=int(kaisyu_time[x]))
+                elif (end_datetime >= dt.datetime(1900,1,1,12,40,0)) and (end_datetime < dt.datetime(1900,1,1,23,59,59)):
+                    flab_box12=False
+                elif (sagyou_now > yasumi12_hantei) and (flag_box12 == True):
+                    kaisi_kekka=kaisi_kekka+dt.timedelta(minutes=40)
+                    flag_box12=False
+                    syoki_min+=40
+                    
+            if (yasumi15_bool.get() == True):
+                yasumi15_hantei=dt.time(15,0,0)
+                sagyou_now=kaisi_kekka.time()
+                if (end_datetime > dt.datetime(1900,1,1,15,0,0)) and (end_datetime < dt.datetime(1900,1,1,15,10,0)):
+                    flag_box15=False
+                    end_datetime=dt.datetime(1900,1,1,15,10,0)
+                    end_kekka=end_datetime+dt.timedelta(minutes=0)
+                    kaisi_jikan[x]="{}:{}".format(end_kekka.hour,end_kekka.minute)
+                    kaisi_kekka=end_kekka+dt.timedelta(minutes=int(kaisyu_time[x]))
+                elif (end_datetime >= dt.datetime(1900,1,1,15,10,0)) and (end_datetime < dt.datetime(1900,1,1,23,59,59)):
+                    flag_box15=False
+                elif (sagyou_now > yasumi15_hantei) and (flag_box15 == True):
+                    kaisi_kekka=kaisi_kekka+dt.timedelta(minutes=10)
+                    flag_box15=False
+                    syoki_min+=10
+            if (yasumi17_bool.get() == True):
+                yasumi17_hantei=dt.time(17,15,0)
+                sagyou_now=kaisi_kekka.time()
+                if (end_datetime > dt.datetime(1900,1,1,17,15,0)) and (end_datetime < dt.datetime(1900,1,1,17,30,0)):
+                    flag_box17=False
+                    end_datetime=dt.datetime(1900,1,1,17,30,0)
+                    end_kekka=end_datetime+dt.timedelta(minutes=0)
+                    kaisi_jikan[x]="{}:{}".format(end_kekka.hour,end_kekka.minute)
+                    kaisi_kekka=end_kekka+dt.timedelta(minutes=int(kaisyu_time[x]))
+                elif (end_datetime >= dt.datetime(1900,1,1,17,30,0)) and (end_datetime < dt.datetime(1900,1,1,23,59,59)):
+                    flag_box17=False
+                elif (sagyou_now > yasumi17_hantei) and (flag_box17 == True):
+                    kaisi_kekka=kaisi_kekka+dt.timedelta(minutes=15)
+                    flag_box17=False
+                    syoki_min+=15
+                
+                    
+            end_jikan[x]="{}:{}".format(kaisi_kekka.hour,kaisi_kekka.minute)#str型
+            syoki_min+=2
+            
+            
+            
+
+        
+        for i in range(sagyou_index):
+            sub_sagyoulabel=tk.Label(sub_frame,text=kaisyu_sagyou[i],anchor=tk.W,width=22,font=("","12","bold"))
+            sub_sagyoulabel.grid(row=i+1,column=0)
+            kaisi_label=tk.Label(sub_frame,text="開始時間",width=10,height=2)
+            kaisi_label.grid(row=i+1,column=1)
+            sub_label[i]=tk.Label(sub_frame,text=kaisi_jikan[i],width=10,relief=tk.SOLID,bg="white",font=("MSゴシック", "12", "bold"))
+            sub_label[i].grid(row=i+1,column=2)
+            sub_label[i].bind("<1>",color_change_red)
+            sub_label[i].bind("<Double-1>",color_change_green)
+            sub_label[i].bind("<Triple-1>",color_change_yellow)
+            sub_label[i].bind("<3>",color_change_white)
+            end_label=tk.Label(sub_frame,text="終了時間",width=10,height=2)
+            end_label.grid(row=i+1,column=3)
+            sub_label2[i]=tk.Label(sub_frame,text=end_jikan[i],width=10,relief=tk.SOLID,bg="white",font=("MSゴシック", "12", "bold"))
+            sub_label2[i].grid(row=i+1,column=4)
+            sub_label2[i].bind("<1>",color_change_red)
+            sub_label2[i].bind("<Double-1>",color_change_green)
+            sub_label2[i].bind("<Triple-1>",color_change_yellow)
+            sub_label2[i].bind("<3>",color_change_white)
+
+        
+        
+        
+
+
+
+"""-----------------------------------------
+
+外装作成
+
+-----------------------------------------"""
+
+#Frameでコンボボックス群を囲う combobox
+combo_frame=tk.Frame(root,width=300,height=200,relief=tk.SUNKEN,bd=2)
+combo_frame.place(x=10,y=15)
+combo_frame.propagate(False)#propagateメソッドを使ってframeサイズを固定化
+
+askl_label=tk.Label(combo_frame,text="ロッカー１",foreground="brown",background="darkseagreen1",width=8,height=1)
+askl_label.grid(row=0,column=0)
+
+ask_var=tk.StringVar()
+
+askl_combo=ttk.Combobox(combo_frame,value=askl_value,textvariable=ask_var,state="readonly",width=16)
+askl_combo.grid(row=1,column=0)
+askl_combo.bind("<<ComboboxSelected>>",askl_select)
+#askl_combo.bind("<<ComboboxSelected>>",act_combo,"+")#複数のbind関数を実行したい時には第三引数に"+"（最初のbindを実行後に二つ目を実行）または""（最初のbindを実行せずに二つ目を実行、こちらがデフォルト）で設定可能
+
+plus_label=tk.Label(combo_frame,text="ロッカー２",foreground="brown",background="darkseagreen1",width=8,height=1)
+plus_label.grid(row=2,column=0)
+plu_var=tk.StringVar()
+
+plus_combo=ttk.Combobox(combo_frame,value=plus_value,textvariable=plu_var,state="readonly",width=16)
+plus_combo.grid(row=3,column=0)
+plus_combo.bind("<<ComboboxSelected>>",plus_select)
+
+locker_label=tk.Label(combo_frame,text="ロッカー",foreground="brown",background="darkseagreen1",width=8,height=1)
+locker_label.grid(row=4,column=1)
+lock_var=tk.StringVar()
+
+locker_combo=ttk.Combobox(combo_frame,value=locker_value,textvariable=lock_var,state="readonly",width=16)
+locker_combo.grid(row=5,column=1)
+locker_combo.bind("<<ComboboxSelected>>",locker_select)
+
+etc_label=tk.Label(combo_frame,text="その他",foreground="brown",background="darkseagreen1",width=8,height=1)
+etc_label.grid(row=6,column=1)
+etc_var=tk.StringVar()
+
+etc_combo=ttk.Combobox(combo_frame,value=etc_value,textvariable=etc_var,state="readonly",width=16)
+etc_combo.grid(row=7,column=1)
+etc_combo.bind("<<ComboboxSelected>>",etc_select)
+
+
+
+#Frameで時間設定を囲う spinbox
+start_frame=tk.Frame(root,width=180,height=10,relief=tk.SUNKEN,bd=2)
+start_frame.place(x=411,y=15)
+
+hour_val=tk.IntVar()
+min_val=tk.IntVar()
+hour_spin=ttk.Spinbox(start_frame,width=4,increment=1,from_=0,to_=23,state="normal",textvariable=hour_val)
+hour_spin.pack(side=tk.LEFT)
+jikan_sikiri=tk.Label(start_frame,text=":")
+jikan_sikiri.pack(side=tk.LEFT,padx=2)
+min_spin=ttk.Spinbox(start_frame,width=4,increment=1,from_=0,to_=59,wrap="True",state="normal",textvariable=min_val)
+min_spin.pack(side=tk.LEFT,padx=5)
+now_button=tk.Button(start_frame,width=8,text="現在時刻",command=time_now)
+now_button.pack(side=tk.LEFT,padx=3)
+
+
+
+
+#Frameで速度設定を囲う radiobutton
+hz_frame=tk.Frame(root,width=180,height=10,relief=tk.SUNKEN,bd=2)
+hz_frame.place(x=411,y=70)
+hz_invar=tk.IntVar()#IntVarはウィジェット変数でこれを設定するとラジオボタンのチェックがついている方のvalueを自動的に取得することができる
+#ラベルフレーム使用　text="周波数設定" ラベルフレーム内にhzラジオボタンを設定
+hz35_radio=tk.Radiobutton(hz_frame,text="35hz",value=0,variable=hz_invar).pack(side=tk.LEFT)#チェックがある場合はhz_invarには0が代入
+hz40_radio=tk.Radiobutton(hz_frame,text="40hz",value=1,variable=hz_invar).pack(side=tk.LEFT)#チェックがある場合はhz_invarには1が代入
+
+
+#Frameで休み時間設定を作る checkbutton
+yasumi_frame=tk.Frame(root,width=180,height=20,relief=tk.SUNKEN,bd=2)#frameはtk.Frame(a).pack()と行った感じにpackやplaceをまとめて記述してしまうと他のウィジェットがフレーム内に納まらない
+yasumi_frame.place(x=411,y=120)#Frameのplace等は分けて記述する
+yasumi12_bool=tk.BooleanVar(value=True)#BooleanVarはウィジェット変数の一つ　ここには自動的にTrueかFalesが取得できる
+yasumi15_bool=tk.BooleanVar(value=False)
+yasumi17_bool=tk.BooleanVar(value=False)
+hour12_check=tk.Checkbutton(yasumi_frame,text="12時休憩",variable=yasumi12_bool).grid(row=0,column=0)
+hour15_check=tk.Checkbutton(yasumi_frame,text="15時休憩",variable=yasumi15_bool).grid(row=0,column=1)
+hour17_check=tk.Checkbutton(yasumi_frame,text="残業休憩",variable=yasumi17_bool).grid(row=0,column=2)
+
+
+#spinboxを設定する　作業数 spinbox
+spin_frame=tk.Frame(root,relief=tk.SUNKEN,bd=2)
+spin_frame.place(x=411,y=170)
+kihon_suu=tk.IntVar()
+spin_label=tk.Label(spin_frame,text="作業数",width=7).pack(side=tk.LEFT)
+sagyou_spin=tk.Spinbox(spin_frame,width=7,from_=1,to_=10000,increment=1,wrap="True",textvariable=kihon_suu)
+sagyou_spin.pack(side=tk.RIGHT)
+sagyou_spin.bind("<FocusOut>",spin_out)
+
+
+
+#部品選択項目をframeで囲う listbox
+buhin_frame=tk.Frame(root,width=230,height=500,relief=tk.SUNKEN,bd=2)
+buhin_frame.place(x=10,y=220)
+syoki_ka=[]
+buhi_mei=tk.StringVar(value=syoki_ka)
+buhin_label=tk.Label(buhin_frame,text="作業選択",width=8).pack(anchor=tk.W)
+buhin_list=tk.Listbox(buhin_frame,width=28,height=25,selectmode="browse",listvariable=buhi_mei)
+buhin_list.pack(anchor=tk.W)
+buhin_list.bind("<<ListboxSelect>>",buhin_bind)
+
+
+#作業名と時間表示枠を作る canvas scrollbar
+canvas_frame=tk.Frame(root,relief=tk.SUNKEN,bd=2)
+sagyou_canvas=tk.Canvas(canvas_frame,width=230,height=545)#,relief=tk.SUNKEN,bd=2,bg = "skyblue",width=230,height=550)
+canvas_frame.place(x=230,y=220)
+sagyou_frame=tk.Frame(sagyou_canvas)
+time_frame=tk.Frame(sagyou_canvas)
+sagyou_entry=["A"]*70
+sagyou_time=["s"]*70
+for i in range(70):
+    sagyou_entry[i]=tk.Entry(sagyou_frame,width=25)
+    sagyou_entry[i].pack()
+    sagyou_time[i]=tk.Entry(time_frame,width=10,state="readonly")
+    sagyou_time[i].pack()
+    
+#sagyou_canvasにScrollbarを設定
+#canvas_wid=sagyou_frame.winfo_width()作業フレームの幅を変数に代入する
+sagyou_scrollbar=tk.Scrollbar(sagyou_canvas,orient=tk.VERTICAL,command=sagyou_canvas.yview)
+sagyou_canvas.configure(scrollregion=(0,0,230,1340))
+sagyou_canvas.configure(yscrollcommand=sagyou_scrollbar.set)
+sagyou_scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
+sagyou_canvas.create_window(3,3,window=sagyou_frame,anchor="nw",width=100,height=1850)
+sagyou_canvas.create_window(103,3,window=time_frame,anchor="nw",width=80,height=1850)
+sagyou_canvas.pack(expand=True,fill=tk.BOTH)
+sagyou_canvas.pack_propagate(0)
+
+
+#スタートボタン、削除ボタンの設置
+button_frame=tk.Frame(root,relief=tk.SUNKEN,bd=2,width=80)
+button_frame.place(x=500,y=650)
+sakujo_button=tk.Button(button_frame,text="削除",width=8,command=sakujo).pack(fill=tk.X)
+zensakujo_button=tk.Button(button_frame,text="全削除",command=all_sakujo).pack(pady=7,fill=tk.X)
+start_button=tk.Button(button_frame,text="スタート",command=start_wind).pack(pady=3,fill=tk.X)
+
+
+
+
+
+root.mainloop()
