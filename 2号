@@ -1,0 +1,437 @@
+import tkinter as tk
+from tkinter import ttk
+import datetime as dt
+from tkinter import messagebox
+from math import ceil
+import sys
+
+root=tk.Tk()
+root.title("塗装2号")
+root.geometry("500x550")
+root.resizable(width=False,height=False)
+
+"""----------------------------------------------
+
+データ
+
+----------------------------------------------"""
+#コンボボックス選択リスト
+combo_seihin=["a","b","c","d","e","f","g","h","i","j","k","l","m",
+              "n","o","p","q","r","s","色替え"]#コンボボックスに製品名を加えたい場合はまずここのリストに製品名を追加
+#製品に対する基本lot数設定　辞書
+
+dict_sagyousuu={"a":50,"b":50,"c":50,"d":30,"e":50,"f":30,"g":30,"h":30,"i":50,"j":50,"k":30,
+                "l":30,"m":20,"n":50,"o":50,"p":50,"q":100,"r":20,"":0,"s":20,"色替え":20}
+#製品1台あたりの作業倍率　例）spl-4人の扉　1台当たり4枚　2段治具で二枚掛け　2枚掛けなので作業は半分　必要枚数4枚なので4倍　０．５ｘ４で倍率２
+dict_sagyoumei={"a":{"天底":2},"b":{"天底":2,"扉":2,"横仕切り":0.5},"c":{"天底":2,"扉横":3.5},
+                "d":{"天底":2,"扉横":5.5},"e":{"天底":1,"扉":2,"横仕切り":1.5},"f":{"天底":1,"扉横":5.5},
+                "g":{"底横":6,"扉":6},"h":{"底横":6,"扉":6},"i":{"ライン梱包":6},"j":{"ライン梱包":6},
+                "k":{"アジャスター板":1,"左右背":2,"左右側":2,"天":1,"底":1,"縦仕切り":1,"扉":2,"棚":1},
+                "l":{"アジャスター板":1,"左右背":2,"左右側":2,"天":1,"底":1,"縦仕切り":1,"扉":2,"横仕切り":1},
+                "m":{"アジャスター板":1,"左右背":2,"左右側":2,"天":1,"底":1,"縦仕切り":1,"扉":4,"横仕切り":1},
+                "n":{"棚":0.34,"ライン梱包":2},"o":{"棚":1,"ライン梱包":6},
+                "p":{"棚":1,"ライン梱包":6},"q":{"アミ棚":0.333},
+                "r":{"床カバー":1,"ライン梱包":6},"s":{"天板":1.5,"レール":3,"棚":3},"色替え":{"色替え":1}}
+#作業で設定されている作業スピード　例）治具から治具への移動に何秒かかるか　139本が60分で1周する場合3600/139で２５．９
+#1周56分の場合２４．１７　36分の場合１５．５　64分の場合２７．６３　色替えの場合０
+
+dict_speed={"a":{"天底":25.9},"b":{"天底":25.9,"扉":25.9,"横仕切り":25.9},"c":{"天底":25.9,"扉横":25.9},
+            "d":{"天底":25.9,"扉横":25.9},"e":{"天底":25.9,"扉":25.9,"横仕切り":25.9},"f":{"天底":25.9,"扉横":25.9},
+            "g":{"底横":25.9,"扉":25.9},"h":{"底横":25.9,"扉":25.9},"i":{"ライン梱包":24.17},"j":{"ライン梱包":24.17},
+            "k":{"アジャスター板":25.9,"左右背":25.9,"左右側":25.9,"天":25.9,"底":25.9,"縦仕切り":25.9,"扉":25.9,"棚":25.9},
+            "l":{"アジャスター板":25.9,"左右背":25.9,"左右側":25.9,"天":25.9,"底":25.9,"縦仕切り":25.9,"扉":25.9,"横仕切り":25.9},
+            "m":{"アジャスター板":25.9,"左右背":25.9,"左右側":25.9,"天":25.9,"底":25.9,"縦仕切り":25.9,"扉":25.9,"横仕切り":25.9},
+            "n":{"棚":24.17,"ライン梱包":24.17},"o":{"棚":24.17,"ライン梱包":24.17},
+            "p":{"棚":24.17,"ライン梱包":24.17},"q":{"アミ棚":15.5},
+            "r":{"床カバー":25.9,"ライン梱包":25.9},"s":{"天板":25.9,"レール":25.9,"棚":25.9},"色替え":{"色替え":0}}
+
+
+"""-----------------------------------------------
+
+関数
+
+-----------------------------------------------"""
+#サブウィンドウ　ラベルマーキング機能設定
+def color_change_red(event):
+    event.widget.configure(bg="deep pink")
+def color_change_green(event):
+    event.widget.configure(bg="cyan2")
+def color_change_yellow(event):
+    event.widget.configure(bg="goldenrod2")
+def color_change_white(event):
+    event.widget.configure(bg="white")
+
+#スピンボックス　時間関数設定
+
+def time_now():
+    now_hour=dt.datetime.now().time()
+    hour_spin.delete(0,tk.END)
+    hour_spin.insert(0,now_hour.hour)
+    min_spin.delete(0,tk.END)
+    min_spin.insert(0,now_hour.minute)
+
+#コンボボックス　関数設定
+
+def combo_select(event):
+    sagyou_list.delete(0,tk.END)
+    seihin_hako=seihin_combo.get()
+    sagyou_spin.delete(0,tk.END)
+    sagyou_spin.insert(0,dict_sagyousuu[seihin_hako])
+    for i in dict_sagyoumei[seihin_hako]:
+        sagyou_list.insert(0,i)
+    
+#リストボックス　関数設定
+
+def list_select(event):
+    spinsuu=0
+    seihin_hako=seihin_combo.get()
+
+    index=sagyou_list.curselection()
+    if len(index) == 1:
+        buhintaku=sagyou_list.get(index)
+        spinsuu=int(sagyou_spin.get())
+        for i in range(40):
+            hantei_seihin=seihin_entry[i].get()
+            hantei_sagyousuu=jikan_entry[i].get()
+            hantei_speed=sagyouspeed_entry[i].get()
+            if hantei_seihin == "":
+                seihin_entry[i].delete(0,tk.END)
+                jikan_entry[i].delete(0,tk.END)
+                sagyouspeed_entry[i].delete(0,tk.END)
+                if seihin_hako == "色替え":
+                    seihin_entry[i].insert(0,"{}".format(buhintaku))
+                else:
+                    seihin_entry[i].insert(0,"{} {}".format(seihin_hako,buhintaku))
+                jikan_entry[i].insert(0,spinsuu*dict_sagyoumei[seihin_hako][buhintaku])
+                sagyouspeed_entry[i].insert(0,dict_speed[seihin_hako][buhintaku])
+                break
+            elif hantei_sagyousuu == "":
+                seihin_entry[i].delete(0,tk.END)
+                jikan_entry[i].delete(0,tk.END)
+                sagyouspeed_entry[i].delete(0,tk.END)
+                if seihin_hako == "色替え":
+                    seihin_entry[i].insert(0,"{}".format(buhintaku))
+                else:
+                    seihin_entry[i].insert(0,"{} {}".format(seihin_hako,buhintaku))
+                jikan_entry[i].insert(0,spinsuu*dict_sagyoumei[seihin_hako][buhintaku])
+                sagyouspeed_entry[i].insert(0,dict_speed[seihin_hako][buhintaku])
+                break
+            elif hantei_speed == "":
+                seihin_entry[i].delete(0,tk.END)
+                jikan_entry[i].delete(0,tk.END)
+                sagyouspeed_entry[i].delete(0,tk.END)
+                if seihin_hako == "色替え":
+                    seihin_entry[i].insert(0,"{}".format(buhintaku))
+                else:
+                    seihin_entry[i].insert(0,"{} {}".format(seihin_hako,buhintaku))
+                jikan_entry[i].insert(0,spinsuu*dict_sagyoumei[seihin_hako][buhintaku])
+                sagyouspeed_entry[i].insert(0,dict_speed[seihin_hako][buhintaku])
+                break
+            else:
+                continue
+            
+#スタートボタン　関数設定
+
+def start_wind():
+    kaisi_jikan="{}:{}".format(hour_spin.get(),min_spin.get())
+    sagyoumei_list=[]
+    sagyousuu_list=[]
+    sagyouspeed_list=[]
+    sagyou_index=len(sagyoumei_list)
+    kaitai_list=[]
+    counter=0
+    mae_sokudo=0
+    sokudo_henka=0
+    sagyoutime_list=[]
+    try:
+        jikan_sirabe=dt.datetime.strptime(kaisi_jikan,"%H:%M")
+    except ValueError:
+        res=tk.messagebox.showerror(title="エラー",message="時間設定が異常です")
+        return None
+    for i in range(40):
+        if (seihin_entry[i].get() != "") and (jikan_entry[i].get() != "") and (sagyouspeed_entry[i].get() != ""):
+            try:
+                
+                sagyoumei_list.append(seihin_entry[i].get())
+                sagyousuu_list.append(ceil(float(jikan_entry[i].get())))
+                sagyouspeed_list.append(float(sagyouspeed_entry[i].get()))
+            except ValueError:
+                res=tk.messagebox.showerror(title="エラー",message="正しい数値を入力してください")
+                return None
+    if sagyoumei_list[-1] == "色替え":
+        res=tk.messagebox.showerror(title="エラー",message="色替えを最後の作業に設定することはできません")
+        return None
+    sagyouspeed_list2=[]
+    sagyousuu_list3=[]
+    sukima_time=10
+    for i,x in enumerate(sagyoumei_list):#sagyoumei_listの中に色替えが含まれている場合それを削除して色替えに対応しているsagayousuu_listの作業数を変数sukima_timeに代入する
+        if x == "色替え":
+            sagyoumei_list.pop(i)
+            sukima_time=sagyousuu_list.pop(i)#sukima_timeには10が代入されているが色替えの場合は作業数が変わりsukima_timeには色替えで設定した作業数を代入する
+            sagyouspeed_list.pop(i)#色替えに対応しているsagyouspeed_listを削除する
+        sagyousuu_list3.append(sukima_time)
+        sagyousuu_list3.append(sagyousuu_list[i])#sagyousuu_list3にはsukima_timeと作業数が交互に登録されていく
+        sagyouspeed_list2.append(sagyouspeed_list[i])
+        sagyouspeed_list2.append(sagyouspeed_list[i])#sagyouspeed_list2にはsukima_timeと作業速度が交互に登録されていく
+        sukima_time=10#sukima_timeは10に設定を戻す
+    sagyousuu_list2=sagyousuu_list3[1:]#sagyousuu_list3の先頭に登録されているsukima_timeは削除してsagyousuu_list2に代入しなおしておく
+    sagyouspeed_list3=sagyouspeed_list2[1:]#sagyousuu_list2とのインデックスを合わせるために先頭のインデックスを削除する
+    
+                     
+    
+    if hour_spin.get() != "" and min_spin.get() != "":
+        
+        sub_win=tk.Toplevel()
+        sub_win.title("2号")
+        sub_win.geometry("600x500")
+        sub_win.resizable(width=False,height=False)
+        sub_canvas=tk.Canvas(sub_win)
+        sub_canvas.pack(expand=True,fill=tk.BOTH)
+        sub_canvas.pack_propagate(0)
+        sub_frame=tk.Frame(sub_canvas)
+        sub_scr=tk.Scrollbar(sub_canvas,orient=tk.VERTICAL,command=sub_canvas.yview)
+        sub_canvas.configure(scrollregion=(0,0,640,1000))
+        sub_canvas.configure(yscrollcommand=sub_scr.set)
+        sub_scr.pack(side=tk.RIGHT,fill=tk.Y)
+        sub_canvas.create_window(5,5,window=sub_frame,anchor="nw",width=630,height=980)
+        for index , i in enumerate(sagyousuu_list2):
+            kaitai_list.clear()
+            if sagyouspeed_list3[index] < mae_sokudo:#この時点で登録されているmae_sokudoは前作業の速度が登録されている　現作業の速度と前作業の速度を比較
+                counter=139#もしも前作業の速度が現作業の速度よりも数値が高い場合前作業の速度をcounterが0になるまで維持する　counterは1周分にあたる139
+                sokudo_henka=mae_sokudo
+            for x in range(i):
+                if (counter > 0):#counterが０以上の場合
+                    kaitai_list.append(sokudo_henka)
+                    counter-=1
+                else:
+                    kaitai_list.append(sagyouspeed_list3[index])
+            mae_sokudo=sagyouspeed_list3[index]#mae_sokudoに現在の速度を登録
+            sagyoutime_list.append(sum(kaitai_list))#kaitai_listの合計をsagyoutime_listに追加
+        sagyoutime_list2=[sagyoutime_list[i] for i in range(0,len(sagyoutime_list),2)]
+        sagyoutime_list3=[sagyoutime_list[i] for i in range(1,len(sagyoutime_list),2)]
+        sagyoutime_list3.append(0)#インデックスを合わせるために0を追加
+        sukimatime_list=[sagyousuu_list2[i] for i in range(1,len(sagyousuu_list2),2)]
+        sukimatime_list.append(0)
+        sagyousuu_list2=[sagyousuu_list2[i] for i in range(0,len(sagyousuu_list2),2)]
+       
+        
+        startjikan_list=[]
+        endjikan_list=[]
+        sagyou_index=len(sagyoumei_list)
+        syoki_min=0
+        start_datetime=dt.datetime.strptime(kaisi_jikan,"%H:%M")
+        flag_box12=True
+        flag_box15=True
+        flag_box17=True
+        flag12=False
+        flag15=False
+        flag17=False
+        
+        for i in range(sagyou_index):
+            if start_datetime >= dt.datetime(1900,1,1,12,0,0) and (start_datetime < dt.datetime(1900,1,1,12,40,0)) and flag_box12 == True:
+                start_datetime=dt.datetime(1900,1,1,12,40,0)
+                flag_box12 =False
+            elif start_datetime >= dt.datetime(1900,1,1,12,40,0) and start_datetime < dt.datetime(1900,1,1,15,0,0) and flag_box12 == True:
+                flag_box12 = False
+            elif start_datetime >= dt.datetime(1900,1,1,15,0,0) and start_datetime < dt.datetime(1900,1,1,15,10,0) and flag_box15 == True:
+                start_datetime=dt.datetime(1900,1,1,15,10,0)
+                flag_box15 = False
+            elif start_datetime >= dt.datetime(1900,1,1,15,10,0) and start_datetime < dt.datetime(1900,1,1,17,15,0) and flag_box15 == True:
+                flag_box12=False
+                flag_box15=False
+            elif start_datetime >= dt.datetime(1900,1,1,17,15,0) and start_datetime < dt.datetime(1900,1,1,17,30,0) and flag_box17 == True:
+                start_datetime=dt.datetime(1900,1,1,17,30,0)
+                flag_box17 = False
+            elif start_datetime >= dt.datetime(1900,1,1,17,30,0) and start_datetime < dt.datetime(1900,1,1,23,59,59) and flag_box17 == True:
+                flag_box12=False
+                flag_box15=False
+                flag_box17=False
+            
+            start_kekka=start_datetime+dt.timedelta(seconds=syoki_min)
+            startjikan_list.append("{}:{}".format(start_kekka.hour,start_kekka.minute))
+            syoki_min+=int(sagyoutime_list2[i])
+            hiruyasumi=40
+            totyuukyuukei=10
+            zangyoukyuukei=15
+            end_kekka=start_datetime+dt.timedelta(seconds=syoki_min)
+            if end_kekka > dt.datetime(1900,1,1,12,0,0) and end_kekka <= dt.datetime(1900,1,1,15,0,0) and flag_box12 == True:
+                flag12 = True
+                flag_box12 = False
+            elif end_kekka > dt.datetime(1900,1,1,15,0,0) and end_kekka <= dt.datetime(1900,1,1,17,15,0) and flag_box15 == True:
+                flag15 = True
+                flag_box15 = False
+            elif end_kekka > dt.datetime(1900,1,1,17,15,0) and end_kekka <= dt.datetime(1900,1,1,23,59,59) and flag_box17 == True:
+                flag17 = True
+                flag_box17 = False
+            if flag12 == True:
+                flag12 = False
+                #start_datetime=dt.datetime.strptime(kaisi_jikan,"%H:%M")+dt.timedelta(minutes=40)
+                syoki_min+=hiruyasumi*60
+                end_kekka=start_datetime+dt.timedelta(seconds=syoki_min)
+                
+            elif flag15 == True:
+                flag15 = False
+                #start_datetime=dt.datetime.strptime(kaisi_jikan,"%H:%M")+dt.timedelta(minutes=50)
+                syoki_min+=totyuukyuukei*60
+                end_kekka=start_datetime+dt.timedelta(seconds=syoki_min)
+                
+            elif flag17 == True:
+                flag17 = False
+                #start_datetime=dt.datetime.strptime(kaisi_jikan,"%H:%M")+dt.timedelta(minutes=65)
+                syoki_min+=zangyoukyuukei*60
+                end_kekka=start_datetime+dt.timedelta(seconds=syoki_min)
+                
+            endjikan_list.append("{}:{}".format(end_kekka.hour,end_kekka.minute))
+            syoki_min+=int(sagyoutime_list3[i])
+            
+        sub_label=[""]*len(sagyoumei_list)
+        sub_label2=[""]*len(sagyoumei_list)
+        for i in range(len(startjikan_list)):
+            sub_sagyou_label=tk.Label(sub_frame,text=sagyoumei_list[i],anchor=tk.W,width=20,font=("","12","bold"))
+            sub_sagyou_label.grid(row=i+1,column=0)
+            kaisi_label=tk.Label(sub_frame,text="開始時間",width=10,height=2)
+            kaisi_label.grid(row=i+1,column=1)
+            sub_label[i]=tk.Label(sub_frame,text=startjikan_list[i],width=10,relief=tk.SOLID,bg="white",font=("MSゴシック","12","bold"))
+            sub_label[i].grid(row=i+1,column=2)
+            sub_label[i].bind("<1>",color_change_red)
+            sub_label[i].bind("<Double-1>",color_change_green)
+            sub_label[i].bind("<Triple-1>",color_change_yellow)
+            sub_label[i].bind("<3>",color_change_white)
+            end_label=tk.Label(sub_frame,text="終了時間",width=10,height=2)
+            end_label.grid(row=i+1,column=3)
+            sub_label2[i]=tk.Label(sub_frame,text=endjikan_list[i],width=10,relief=tk.SOLID,bg="white",font=("MSゴシック","12","bold"))
+            sub_label2[i].grid(row=i+1,column=4)
+            sub_label2[i].bind("<1>",color_change_red)
+            sub_label2[i].bind("<Double-1>",color_change_green)
+            sub_label2[i].bind("<Triple-1>",color_change_yellow)
+            sub_label2[i].bind("<3>",color_change_white)
+        
+#削除ボタン　関数設定
+
+def all_sakujo():
+    for i in range(40):
+        seihin_entry[i].delete(0,tk.END)
+        jikan_entry[i].delete(0,tk.END)
+        sagyouspeed_entry[i].delete(0,tk.END)
+
+def sakujo():
+    focus_hantei=entry_frame.focus_get()
+    focus_hantei2=entry_frame2.focus_get()
+    focus_hantei3=entry_frame3.focus_get()
+    for i,x in enumerate(seihin_entry):
+        if focus_hantei == x:
+            x.delete(0,tk.END)
+            jikan_entry[i].delete(0,tk.END)
+            sagyouspeed_entry[i].delete(0,tk.END)
+        else:
+            pass
+    for i,x in enumerate(jikan_entry):
+        if focus_hantei2 == x:
+            x.delete(0,tk.END)
+            seihin_entry[i].delete(0,tk.END)
+            sagyouspeed_entry[i].delete(0,tk.END)
+        else:
+            pass
+    for i,x in enumerate(sagyouspeed_entry):
+        if focus_hantei3 == x:
+            x.delete(0,tk.END)
+            jikan_entry[i].delete(0,tk.END)
+            seihin_entry[i].delete(0,tk.END)
+        else:
+            pass
+            
+
+
+
+
+
+
+
+
+
+"""------------------------------------------------
+
+フォーム作成
+
+------------------------------------------------"""
+#製品名　作業数 label
+seihin_frame=tk.Frame(root,width=350,height=50)
+seihin_frame.pack(pady=10)
+seihin_label=tk.Label(seihin_frame,text="製品選択",relief=tk.SUNKEN,bd=2)
+seihin_label.pack(side=tk.LEFT,padx=20)
+jikan_label=tk.Label(seihin_frame,text="開始時間",relief=tk.SUNKEN,bd=2)
+jikan_label.pack(side=tk.RIGHT,padx=150)
+
+#製品名　作業数　開始時間　combobox,spinbox,button
+sagyou_frame=tk.Frame(root,width=450,height=50)
+sagyou_frame.pack(anchor=tk.W,padx=20)
+seihin_var=tk.StringVar()
+seihin_combo=ttk.Combobox(sagyou_frame,value=combo_seihin,textvariable=seihin_var,state="readonly",width=15)
+seihin_combo.pack(side=tk.LEFT)
+seihin_combo.bind("<<ComboboxSelected>>",combo_select)
+sagyou_var=tk.IntVar()
+sagyou_spin=tk.Spinbox(sagyou_frame,width=5,increment=1,from_=1,to_=10000,textvariable=sagyou_var)
+sagyou_spin.pack(side=tk.LEFT,padx=30)
+hour_var=tk.IntVar()
+min_var=tk.IntVar()
+hour_spin=tk.Spinbox(sagyou_frame,width=4,increment=1,from_=0,to_=23,textvariable=hour_var)
+hour_spin.pack(side=tk.LEFT)
+time_label=tk.Label(sagyou_frame,text=":")
+time_label.pack(side=tk.LEFT)
+min_spin=tk.Spinbox(sagyou_frame,width=4,increment=1,from_=0,to_=59,wrap="True",textvariable=min_var)
+min_spin.pack(side=tk.LEFT)
+start_button=tk.Button(sagyou_frame,text="現在時刻",width=10,command=time_now)
+start_button.pack(side=tk.RIGHT,padx=3)
+
+#作業名　作業時間
+list_frame=tk.Frame(root)
+list_frame.pack(side=tk.LEFT,padx=10,anchor=tk.N,pady=40)
+syoki_ka=[]
+list_var=tk.StringVar(value=syoki_ka)#リストを入れられるようにするために定義するのかな？
+list_label=tk.Label(list_frame,text="作業名",width=15).pack()
+sagyou_list=tk.Listbox(list_frame,listvariable=list_var,width=18,height=20)
+sagyou_list.pack()
+sagyou_list.bind("<<ListboxSelect>>",list_select)
+
+#entry_list
+entry_canvas=tk.Canvas(root,width=250,height=400,relief=tk.SUNKEN,bd=2)
+entry_canvas.pack(side=tk.LEFT,anchor=tk.N,padx=10,pady=30,fill=tk.Y)
+entry_canvas.pack_propagate(0)
+entry_frame=tk.Frame(entry_canvas)
+entry_frame2=tk.Frame(entry_canvas)
+entry_frame3=tk.Frame(entry_canvas)
+seihin_entry=[""]*40
+jikan_entry=[""]*40
+sagyouspeed_entry=[""]*40
+sagyou_label=tk.Label(entry_frame,text="作業名")
+sagyou_label.pack()
+sagyousuu_label=tk.Label(entry_frame2,text="作業数")
+sagyousuu_label.pack()
+sagyouspeed_label=tk.Label(entry_frame3,text="作業速度")
+sagyouspeed_label.pack()
+for i in range(40):
+    seihin_entry[i]=tk.Entry(entry_frame,width=18)
+    seihin_entry[i].pack()
+    jikan_entry[i]=tk.Entry(entry_frame2,width=6)
+    jikan_entry[i].pack()
+    sagyouspeed_entry[i]=tk.Entry(entry_frame3,width=6)
+    sagyouspeed_entry[i].pack()
+entry_canvas.create_window(3,3,window=entry_frame,anchor="nw",width=150,height=800)
+entry_canvas.create_window(135,3,window=entry_frame2,anchor="nw",width=50,height=800)
+entry_canvas.create_window(180,3,window=entry_frame3,anchor="nw",width=50,height=800)
+entry_scrollbar=tk.Scrollbar(entry_canvas,orient=tk.VERTICAL,command=entry_canvas.yview)
+entry_canvas.configure(scrollregion=(0,0,180,830))
+entry_canvas.configure(yscrollcommand=entry_scrollbar.set)
+entry_scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
+
+#各種ボタン
+button_frame=tk.Frame(root)
+button_frame.pack(expand=True,fill=tk.Y)
+start_button=tk.Button(button_frame,text="スタート",command=start_wind).pack(side=tk.BOTTOM,fill=tk.X,pady=25)
+alldel_button=tk.Button(button_frame,text="全削除",command=all_sakujo).pack(side=tk.BOTTOM,fill=tk.X,pady=5)
+del_button=tk.Button(button_frame,text="削除",width=8,command=sakujo).pack(pady=5,fill=tk.X,side=tk.BOTTOM)
+
+
+
+
+root.mainloop()
